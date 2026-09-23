@@ -1,1 +1,107 @@
-<!DOCTYPE html><html><head><meta http-equiv='refresh' content='0;url=flips.html'><title>Houser Flips</title></head><body><p><a href='flips.html'>Open Houser Equipment Flips</a></p></body></html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<title>Houser Flips</title>
+<style>
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,sans-serif;background:#F4F1EA;color:#1A242B}
+header{background:#1B3A4B;color:#fff;padding:14px 16px}
+h1{margin:0;font-size:18px}
+nav{display:flex;gap:8px;background:#1B3A4B;padding:8px 12px}
+nav button{border:0;background:transparent;color:#d7e3ea;padding:8px 12px;border-radius:99px;font-weight:700}
+nav button.on{background:#C45C26;color:#fff}
+main{padding:14px;max-width:720px;margin:0 auto}
+.card{background:#fff;border:1px solid #D5DDE2;border-radius:12px;padding:12px;margin:8px 0}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.big{font-size:22px;font-weight:800;color:#1B3A4B}
+label{display:block;font-size:11px;font-weight:700;color:#6B7280;margin:8px 0 3px}
+input,select,button.btn{width:100%;padding:10px;border:1px solid #D5DDE2;border-radius:8px;font:inherit;box-sizing:border-box}
+button.btn{background:#C45C26;color:#fff;font-weight:800;border:0;margin-top:12px}
+.muted{color:#6B7280;font-size:12px}
+.hidden{display:none}
+.row{display:flex;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid #eee}
+</style></head>
+<body>
+<header><h1>Houser Equipment Flips</h1>
+<div class="muted">Works in Safari on iPhone. Add to Home Screen.</div></header>
+<nav>
+<button class="on" id="n0">Home</button>
+<button id="n1">Lots</button>
+<button id="n2">Add</button>
+<button id="n3">Bid</button>
+</nav>
+<main>
+<section id="s0">
+<div class="kpis" id="kpis"></div>
+<div class="card" id="pipe"></div>
+</section>
+<section id="s1" class="hidden"><div id="list"></div></section>
+<section id="s2" class="hidden">
+<div class="card">
+<label>Description</label><input id="desc"/>
+<label>Make / Model</label><input id="make"/>
+<label>Lot #</label><input id="lot"/>
+<label>Status</label>
+<select id="status"><option>Won / In Transit</option><option>In Shop</option><option>Listed</option><option>Sold</option><option>Watching</option></select>
+<label>Hammer $</label><input id="hammer" type="number" value="0"/>
+<label>Buyer premium $</label><input id="premium" type="number" value="0"/>
+<label>Tax $</label><input id="tax" type="number" value="0"/>
+<label>Haul $</label><input id="haul" type="number" value="0"/>
+<label>Repairs $</label><input id="repair" type="number" value="0"/>
+<label>Sale price $</label><input id="salePrice" type="number"/>
+<input type="hidden" id="editId"/>
+<button class="btn" id="save">Save unit</button>
+</div>
+</section>
+<section id="s3" class="hidden">
+<div class="card">
+<label>Expected resale $</label><input id="r" type="number" value="3000"/>
+<label>Est. repairs $</label><input id="p" type="number" value="400"/>
+<label>Premium + haul % (example 0.12)</label><input id="pct" type="number" step="0.01" value="0.12"/>
+<label>Min profit $</label><input id="m" type="number" value="400"/>
+<div class="card" id="bout"></div>
+</div>
+</section>
+</main>
+<script>
+const KEY="houser.flips.phone";
+let items=JSON.parse(localStorage.getItem(KEY)||"[]");
+const $=id=>document.getElementById(id);
+const n=v=>parseFloat(v)||0;
+const money=v=>"$"+Math.round(v).toLocaleString();
+const basis=i=>n(i.hammer)+n(i.premium)+n(i.tax)+n(i.haul)+n(i.repair);
+function persist(){localStorage.setItem(KEY,JSON.stringify(items));draw();}
+function tab(i){
+ for(let k=0;k<4;k++){ $("s"+k).classList.toggle("hidden",k!==i); $("n"+k).classList.toggle("on",k===i); }
+ draw();
+}
+for(let k=0;k<4;k++){ $("n"+k).onclick=()=>tab(k); }
+function draw(){
+ const sold=items.filter(i=>i.status==="Sold");
+ const shop=items.filter(i=>i.status==="In Shop"||i.status==="Won / In Transit");
+ const cash=items.filter(i=>i.status!=="Sold").reduce((s,i)=>s+basis(i),0);
+ const profit=sold.reduce((s,i)=>s+(n(i.salePrice)-basis(i)),0);
+ $("kpis").innerHTML=`<div class="card"><div class="muted">UNITS</div><div class="big">${items.length}</div></div><div class="card"><div class="muted">IN SHOP</div><div class="big">${shop.length}</div></div><div class="card"><div class="muted">CASH TIED</div><div class="big">${money(cash)}</div></div><div class="card"><div class="muted">SOLD PROFIT</div><div class="big">${money(profit)}</div></div>`;
+ $("pipe").innerHTML=items.map(i=>`<div class="row"><div><b>${i.make||i.desc||"Unit"}</b><div class="muted">${i.status} · lot ${i.lot||"—"}</div></div><div>${money(basis(i))}</div></div>`).join("")||"<div class='muted'>No units on this phone yet. Tap Add.</div>";
+ $("list").innerHTML=items.map(i=>`<div class="card" data-id="${i.id}"><b>${i.make||i.desc||"Unit"}</b><div class="muted">${i.status} · ${i.desc||""}</div><div>Cost ${money(basis(i))}${i.salePrice?" · sold "+money(n(i.salePrice)):""}</div></div>`).join("")||"<div class='card muted'>Nothing saved yet.</div>";
+ document.querySelectorAll("#list .card[data-id]").forEach(el=>el.onclick=()=>edit(el.dataset.id));
+ const resale=n($("r").value),rep=n($("p").value),pct=n($("pct").value),minp=n($("m").value);
+ const max=(resale-rep-minp)/(1+pct);
+ $("bout").innerHTML=`<div class="big">${money(max)} max hammer</div><div class="muted">All-in if you pay that: ${money(max*(1+pct)+rep)}</div>`;
+}
+function edit(id){
+ const i=items.find(x=>x.id===id); if(!i)return;
+ ["desc","make","lot","status","hammer","premium","tax","haul","repair","salePrice"].forEach(k=>{$(k).value=i[k]??"";});
+ $("editId").value=id; tab(2);
+}
+$("save").onclick=()=>{
+ const id=$("editId").value||("u"+Date.now());
+ const i={id,desc:$("desc").value,make:$("make").value,lot:$("lot").value,status:$("status").value,hammer:n($("hammer").value),premium:n($("premium").value),tax:n($("tax").value),haul:n($("haul").value),repair:n($("repair").value),salePrice:$("salePrice").value};
+ items=items.filter(x=>x.id!==id); items.unshift(i); $("editId").value=""; persist(); tab(1);
+};
+["r","p","pct","m"].forEach(id=>$(id).oninput=draw);
+draw();
+</script>
+</body></html>
